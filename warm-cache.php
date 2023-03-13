@@ -43,8 +43,8 @@ class warm_cache extends mijnpress_plugin_framework {
             // No override post?
             if (!isset($_POST['update_sitemap']) || !$_POST['update_sitemap']) {
                 echo '<div class="error"><p>';
-                _e( 'A notice from plugin Warm-cache: Your configured sitemap url is not configured, I cannot crawl your pages.', 'managedwphosting_warmcache');
-                echo '<a href="'.admin_url('plugins.php?page=warm-cache%2Fwarm-cache.php').'">'._('Update your sitemap url now', 'managedwphosting_warmcache').'</a>.</p></div>';
+                _e( 'A notice from plugin Warm-cache: Your configured sitemap url is not configured, I cannot crawl your pages.', 'managedwphosting_warmcache' );
+                echo '<a href="'.admin_url('plugins.php?page=warm-cache%2Fwarm-cache.php').'">'.__( 'Update your sitemap url now', 'managedwphosting_warmcache' ).'</a>.</p></div>';
             }
         } else {
             // Check sitemap validity
@@ -143,8 +143,7 @@ class warm_cache extends mijnpress_plugin_framework {
         }
     }
 
-    static function addPluginSubMenu_($title = '',$function = '')
-    {
+    static function addPluginSubMenu_($title = '',$function = '') {
         $plugin = new warm_cache();
         $plugin->addPluginSubMenu( 'Warm cache', array( 'warm_cache', 'admin_menu' ), __FILE__ );
     }
@@ -159,8 +158,7 @@ class warm_cache extends mijnpress_plugin_framework {
         return $links;
     }
 
-    public static function admin_menu()
-    {
+    public static function admin_menu() {
         load_plugin_textdomain( 'plugin_warm_cache' );
         $warm_cache_admin = new warm_cache();
         $warm_cache_admin->plugin_title = 'Warm cache';
@@ -172,7 +170,7 @@ class warm_cache extends mijnpress_plugin_framework {
 
             if (!$stats['crawl']) {
                 $msg = 'Ok, we have detected your sitemap url but it has not been visited by the plugin\'s crawler.<br/>';
-                $warm_cache_api_url = trailingslashit(get_bloginfo('url')).'/warmcache/?warm-key='.get_option('plugin_warm_cache_api');
+                $warm_cache_api_url = trailingslashit(get_bloginfo('url')).'warmcache/?warm-key='.get_option('plugin_warm_cache_api');
                 $msg .= 'The url you should call from a cronjob is: '.$warm_cache_api_url.'<br/>';
                 $msg .= 'To re-set the key, visit this url: '.admin_url('plugins.php?page=warm-cache/warm-cache.php&resetkey=true').'<br/>';
                 $msg .= '<p>Or save you all the hassle and use our <a href="https://www.autowarmcache.com/">Auto Warm cache service</a></p>';
@@ -206,8 +204,7 @@ class warm_cache extends mijnpress_plugin_framework {
     /**
     * Gets table and stats
     */
-    private function get_stats()
-    {
+    private function get_stats() {
         $myposts = get_posts('post_type=warmcache&numberposts=75&order=DESC&orderby=post_date');
 
         $statdata = get_option('plugin_warm_cache_start', false);
@@ -253,8 +250,7 @@ class warm_cache extends mijnpress_plugin_framework {
      * Updates sitemap url override
      * @param unknown_type $url
      */
-    private function update_sitemap_overide_url($url)
-    {
+    private function update_sitemap_overide_url($url) {
         delete_option('plugin_warm_cache_sitemap_override');
         add_option( 'plugin_warm_cache_sitemap_override', htmlspecialchars($url));
     }
@@ -264,8 +260,7 @@ class warm_cache extends mijnpress_plugin_framework {
      * @param    string    $flush
 
      */
-    private function update_flush($flush)
-    {
+    private function update_flush($flush) {
         delete_option( 'plugin_warm_cache_lb_flush' );
         if ( $flush != 'yes' ) { $flush = 'no'; } // Sanity check
         add_option( 'plugin_warm_cache_lb_flush', htmlspecialchars($flush));
@@ -273,8 +268,7 @@ class warm_cache extends mijnpress_plugin_framework {
         $this->flush_loadbalancer = get_option("plugin_warm_cache_lb_flush");
     }
 
-    private function configuration_check()
-    {
+    private function configuration_check() {
         $this->google_sitemap_generator_options = get_option("sm_options");
         $msg = '';
         if (isset($_GET['resetkey'])) {
@@ -306,7 +300,7 @@ class warm_cache extends mijnpress_plugin_framework {
             $returnvar = false;
         } else {
             $msg .= 'Sitemap url: <a target="_blank" href="'.$this->sitemap_url.'">'.$this->sitemap_url.'</a><br/>';
-            $warm_cache_api_url = trailingslashit(get_bloginfo('url')).'/warmcache/?warm-key='.get_option('plugin_warm_cache_api');
+            $warm_cache_api_url = trailingslashit(get_bloginfo('url')).'warmcache/?warm-key='.get_option('plugin_warm_cache_api');
             $msg .= 'The url you should call from a cronjob is: '.$warm_cache_api_url.'<br/>';
             $msg .= 'To re-set the key, visit this url: '.admin_url('plugins.php?page=warm-cache/warm-cache.php&resetkey=true').'<br/>';
             $msg .= '<p>Or save you all the hassle and use our <a href="https://www.autowarmcache.com/">Auto Warm cache service</a></p>';
@@ -323,8 +317,7 @@ class warm_cache extends mijnpress_plugin_framework {
     * Retrieves public front-end sitemap URL
     * @return    string|false
     */
-    public function get_sitemap_url()
-    {
+    public function get_sitemap_url() {
         // Guess sitemap url from Google XML sitemap generator
         if ( isset( $this->google_sitemap_generator_options["sm_b_location_mode"] ) &&  $this->google_sitemap_generator_options["sm_b_location_mode"] == "manual" ) {
             $sitemap_url = $this->google_sitemap_generator_options["sm_b_fileurl_manual"];
