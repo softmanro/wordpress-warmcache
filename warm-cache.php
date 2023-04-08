@@ -114,8 +114,8 @@ class warm_cache extends mijnpress_plugin_framework {
         );
 
         $args = array(
-            //'labels'             => $labels,
-                'description'        => __( 'Description.', 'managedwphosting_warmcache' ),
+            //'labels'           => $labels,
+            'description'        => __( 'Description.', 'managedwphosting_warmcache' ),
             'public'             => false,
             'publicly_queryable' => false,
             'show_ui'            => true,
@@ -145,9 +145,8 @@ class warm_cache extends mijnpress_plugin_framework {
 
     static function addPluginSubMenu_($title = '',$function = '') {
         $plugin = new warm_cache();
-        $plugin->addPluginSubMenu( 'Warm cache', array( 'warm_cache', 'admin_menu' ), __FILE__ );
+        $plugin->addPluginSubMenu( 'Warm cache', array( 'warm_cache', 'admin_menu' ), __FILE__, 'manage_options', 'options-general.php' );
     }
-
 
     /**
      * Additional links on the plugin page

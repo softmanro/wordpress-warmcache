@@ -25,6 +25,59 @@ class warm_cache_crawl {
         return $limit;
     }
 
+    private function do_crawl_multi( $urls ) {
+        $header_variations = array(
+                                array( "Accept" => "text/html,application/xhtml+xml,application/xml" ),
+                                array( "Accept-Encoding" => "gzip", "Accept" => "text/html,application/xhtml+xml,application/xml" ),
+                                array( "Accept-Encoding" => "br", "Accept" => "text/html,application/xhtml+xml,application/xml" )
+                                );
+
+        $multi_curl = curl_multi_init();
+        $curl_array = array();
+        $curl_index = 0;
+
+        foreach( $urls as $url ) {
+            foreach ( $header_variations as $i => $headers ) {
+                $curl_array[$curl_index] = curl_init();
+
+                curl_setopt_array( $curl_array[$curl_index], array(
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_MAXREDIRS => 1,
+                    CURLOPT_TIMEOUT => 5,
+                    CURLOPT_HTTPHEADER => $headers
+                ) );
+
+                curl_multi_add_handle( $multi_curl, $curl_array[$curl_index] );
+
+                $curl_index++;
+            }
+        }
+
+        // execute the multi handle
+        $active = null;
+
+        do {
+            $status = curl_multi_exec( $multi_curl, $active );
+            if ( $active ) {
+                // Wait a short time for more activity
+                curl_multi_select( $multi_curl );
+            }
+        } while ( $active && $status == CURLM_OK );
+
+        // close the handles
+        for ( $i=0; $i < $curl_index; $i++ ) {
+            curl_multi_remove_handle( $multi_curl, $curl_array[$i] );
+        }
+
+        curl_multi_close( $multi_curl );
+
+        // free up additional memory resources
+        for ( $i=0; $i < $curl_index; $i++ ) {
+            curl_close( $curl_array[$i] );
+        }
+    }
+
     public function __construct() {
         // Prevent any reverse proxy caching / browser caching
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -156,69 +209,52 @@ class warm_cache_crawl {
         die();
     }
 
-    private function mp_process_sitemap( $sitemap_url, $is_sub = false )
-    {
-        $content_encodings = array ("br", "gzip");
+    private function mp_process_sitemap( $sitemap_url, $is_sub = false ) {
         if ( substr_count( $sitemap_url, 'warmcache-sitemap.xml' ) > 0 || substr_count( $sitemap_url, 'warmcache' ) > 0) {
             // No need to crawl our own post type .. bail
             return;
         }
         $xmldata = wp_remote_retrieve_body( wp_remote_get( $sitemap_url ) );
         $xml = simplexml_load_string( $xmldata );
-        if ($xml === false) {
+        if ( $xml === false ) {
             return;
         }
 
         $cnt = count( $xml->url );
         if ( $cnt > 0 ) {
             $this->totalcount += $cnt;
+
+            if ( $this->hits >= $this->limit ) {
+                return;
+            }
+
             if ( ( $this->start > $this->index ) && ($this->start > $this->index + $cnt ) ) {
                 $this->index += $cnt;
                 return;
             }
 
-            for($i = 0; $i < $cnt; $i++){
+            for ($i = 0; $i < $cnt; $i++) {
                 $this->index++;
 
-                if ( $this->hits >= $this->limit ) {
-                    return;
-                }
-
                 if ( $this->index > $this->start ) {
-                    $this->hits++;
+
                     $page = (string)$xml->url[$i]->loc;
                     echo '<br/>Busy with: ' . $page . "\n";
-
-                    set_transient( $this->pid_lock, 'Busy', MINUTE_IN_SECONDS );
-
-                    $this->newvalue['pages'][] = $page;
-                    // cache "plain" (e.g no headers) version of the pages
-                    $tmp = wp_remote_get( $page );
                     if ( $this->useflush == 'yes' && function_exists( 'flush' ) ) {
                         flush(); // prevent timeout from the loadbalancer
                     }
 
-                    // try to cache both Brotli and Gzip versions of the pages
-                    foreach ($content_encodings as $content_encoding) {
-                        $args = array(
-                            'headers' => array( "Accept-Encoding" => $content_encoding )
-                        );
-                        $tmp = wp_remote_get( $page, $args );
-                        if ( $this->useflush == 'yes' && function_exists( 'flush' ) ) {
-                            flush(); // prevent timeout from the loadbalancer
-                        }
+                    set_transient( $this->pid_lock, 'Busy', MINUTE_IN_SECONDS );
+
+                    $this->newvalue['pages'][] = $page;
+
+                    $this->do_crawl_multi( array( $page ) );
+
+                    $this->hits++;
+                    if ( $this->hits >= $this->limit ) {
+                        return;
                     }
 
-                    // try to cache both Brotli and Gzip versions of the pages, with "standard" Google Chrome Accept header
-                    foreach ($content_encodings as $content_encoding) {
-                        $args = array(
-                            'headers' => array( "Accept-Encoding" => $content_encoding, "Accept" => "text/html,application/xhtml+xml,application/xml" )
-                        );
-                        $tmp = wp_remote_get( $page, $args );
-                        if ( $this->useflush == 'yes' && function_exists( 'flush' ) ) {
-                            flush(); // prevent timeout from the loadbalancer
-                        }
-                    }
                 }
             }
         } else {
@@ -227,10 +263,8 @@ class warm_cache_crawl {
             if ( $cnt > 0 ) {
                 for( $i = 0;$i < $cnt; $i++ ){
                     $sub_sitemap_url = (string)$xml->sitemap[$i]->loc;
-                    if ( $this->hits <= $this->limit ) {
-                        echo "<br/>Start with submap: " . $sub_sitemap_url . "\n";
-                        $this->mp_process_sitemap( $sub_sitemap_url, true );
-                    }
+                    echo "<br/>Start with submap: " . $sub_sitemap_url . "\n";
+                    $this->mp_process_sitemap( $sub_sitemap_url, true );
                 }
             }
         }

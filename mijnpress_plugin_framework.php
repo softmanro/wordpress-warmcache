@@ -67,7 +67,7 @@ class mijnpress_plugin_framework {
      * @author     Ramon Fincken
      */
     function addPluginSubMenu( $title, $function, $file, $capability = 10, $where = "plugins.php" ) {
-        add_submenu_page( $where, $title, $title, 'manage_options', $file, $function );
+        add_submenu_page( $where, $title, $title, $capability, $file, $function );
     }
 
     /**
